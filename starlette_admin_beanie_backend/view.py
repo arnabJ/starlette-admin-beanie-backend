@@ -1,15 +1,31 @@
+import re
 from typing import List, Any, Optional, Dict, Sequence, Union, Type
 
 from beanie import Document
+from beanie.odm.operators.find import logical
+from beanie.odm.operators.find.comparison import In
+from beanie.odm.operators.find.evaluation import RegEx
 from bson import ObjectId
 from pydantic import ValidationError
 from starlette.requests import Request
-from starlette_admin import BaseField, CollectionField, ListField, HasOne, HasMany
+from starlette_admin.fields import (
+    BaseField,
+    CollectionField,
+    ColorField,
+    EmailField,
+    HasMany,
+    HasOne,
+    ListField,
+    PhoneField,
+    StringField,
+    TextAreaField,
+    URLField,
+)
 from starlette_admin.helpers import prettify_class_name, slugify_class_name, pydantic_error_to_form_validation_errors
 from starlette_admin.views import BaseModelView
 
 from .converters import ModelConverter
-from .helpers import normalize_list
+from .helpers import normalize_list, resolve_deep_query
 
 
 class ModelView(BaseModelView):
@@ -61,21 +77,20 @@ class ModelView(BaseModelView):
             where: Union[Dict[str, Any], str, None] = None,
             order_by: Optional[List[str]] = None
     ) -> Sequence[Any]:
-        values = await self.model.find().to_list()
+        q = await self._build_query(request, where)
+        values = await self.model.find(q).to_list()
         return values
 
     async def count(self, request: Request, where: Union[Dict[str, Any], str, None] = None) -> int:
-        return await self.model.find().count()
+        q = await self._build_query(request, where)
+        return await self.model.find(q).count()
 
     async def find_by_pk(self, request: Request, pk: Any) -> Any:
         return await self.model.get(pk)
 
     async def find_by_pks(self, request: Request, pks: List[Any]) -> Sequence[Any]:
-        return await self.model.find({"id": {"$in": pks}}).to_list()
+        return await self.model.find(In(self.model.id, [ObjectId(pk) for pk in pks])).to_list()
 
-    """
-        Needs Testing
-    """
     async def create(self, request: Request, data: Dict) -> Any:
         data = await self._arrange_data(request, data)
         try:
@@ -88,9 +103,6 @@ class ModelView(BaseModelView):
         except Exception as e:
             self.handle_exception(e)
 
-    """
-        Needs Testing
-    """
     async def edit(self, request: Request, pk: Any, data: Dict[str, Any]) -> Any:
         data = await self._arrange_data(request, data, is_edit=True)
         try:
@@ -104,11 +116,8 @@ class ModelView(BaseModelView):
         except Exception as e:
             self.handle_exception(e)
 
-    """
-        Needs Testing
-    """
     async def delete(self, request: Request, pks: List[Any]) -> Optional[int]:
-        objs = self.model.find({"id": {"$in": pks}})
+        objs = self.model.find(In(self.model.id, [ObjectId(pk) for pk in pks]))
         objs_list = await objs.to_list()
         for obj in objs_list:
             await self.before_delete(request, obj)
@@ -165,3 +174,31 @@ class ModelView(BaseModelView):
             else:
                 arranged_data[name] = value
         return arranged_data
+
+    async def _build_query(self, request: Request, where: Union[Dict[str, Any], str, None] = None) -> Any:
+        if where is None:
+            return {}
+        if isinstance(where, dict):
+            return resolve_deep_query(where, self.model)
+        return await self.build_full_text_search_query(request, where)
+
+    async def build_full_text_search_query(self, request: Request, term: str) -> Any:
+        _list = []
+        for field in self.get_fields_list(request):
+            if (
+                field.searchable
+                and field.name != "id"
+                and type(field)
+                in [
+                    StringField,
+                    TextAreaField,
+                    EmailField,
+                    URLField,
+                    PhoneField,
+                    ColorField,
+                ]
+            ):
+                _list.append(
+                    RegEx(field.name, rf"{re.escape(str(term))}", "i")
+                )
+        return logical.Or(*_list) if len(_list) else {}
