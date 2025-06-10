@@ -2,6 +2,7 @@ import typing as t
 
 from beanie import Document
 from beanie.odm.operators.find import comparison as c, evaluation as e, logical as l
+from pydantic import Field
 
 
 def normalize_list(
@@ -62,17 +63,17 @@ def resolve_deep_query(
                         case "not_in":
                             return c.NotIn(k, val)
                         case "startswith":
-                            return e.RegEx(k, rf"^{val}", "i")
+                            return e.RegEx(k, f"^{val}", "i")
                         case "not_startswith":
-                            return l.Nor(e.RegEx(k, rf"^{val}"))
+                            return l.Not(e.RegEx(k, f"^{val}", "i"))
                         case "endswith":
-                            return e.RegEx(k, rf"{val}$")
+                            return e.RegEx(k, f"{val}$", "i")
                         case "not_endswith":
-                            return l.Nor(e.RegEx(k, rf"{val}$"))
+                            return l.Not(e.RegEx(k, f"{val}$", "i"))
                         case "contains":
-                            return e.RegEx(k, rf"{val}")
+                            return e.RegEx(k, f"{val}", "i")
                         case "not_contains":
-                            return l.Nor(e.RegEx(k, rf"{val}"))
+                            return l.Not(e.RegEx(k, f"{val}", "i"))
                         case "is_false":
                             return c.Eq(k, False)
                         case "is_true":
@@ -84,10 +85,19 @@ def resolve_deep_query(
                         case "between":
                             return l.And(k >= val[0], k <= val[1])
                         case "not_between":
-                            return l.And(k < val[0], k > val[1])
+                            return l.Or(k < val[0], k > val[1])
     if logic:
         if logic == "or":
             return {"$or": queries}
         else:
             return {"$and": queries}
     return queries
+
+
+def resolve_proxy(model: t.Type[Document], proxy_name: str) -> t.Optional[Field]:
+    _list = proxy_name.split(".")
+    m = model
+    for v in _list:
+        if m is not None:
+            m = getattr(m, v, None)  # type: ignore
+    return m  # type: ignore[return-value]
