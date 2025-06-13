@@ -68,8 +68,14 @@ class ModelView(BaseModelView):
             order_by: Optional[List[str]] = None
     ) -> Sequence[Any]:
         q = await self._build_query(request, where)
-        # o = await self._build_order_clauses([] if order_by is None else order_by)
-        values = await self.model.find(q, fetch_links=True, nesting_depth=1, projection_model=self.model).to_list()
+        o = await self._build_order_clauses([] if order_by is None else order_by)
+        values = await (
+            self
+            .model
+            .find(q, fetch_links=True, nesting_depth=1, projection_model=self.model)
+            .sort(o)
+            .to_list()
+        )
         return values
 
     async def count(self, request: Request, where: Union[Dict[str, Any], str, None] = None) -> int:
@@ -184,8 +190,8 @@ class ModelView(BaseModelView):
             key, order = value.strip().split(maxsplit=1)
             clause = resolve_proxy(self.model, key)
             if clause is not None:
-                clauses.append(clause.desc() if order.lower() == "desc" else clause)
-        return tuple(clauses) if len(clauses) > 0 else None
+                clauses.append(f"{'+' if order.lower() == 'asc' else '-'}{clause}")
+        return clauses
 
     async def build_full_text_search_query(self, request: Request, term: str) -> Any:
         _list = []

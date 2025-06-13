@@ -44,11 +44,13 @@ class ModelConverter(BaseODMModelConverter):
 
     @converts(Link)
     def conv_link(self, *args: Any, type: Link, **kwargs: Any) -> BaseField:
+        field_name = kwargs.get("name")
+        model: Document = kwargs.get("model")
         # get the model type from the Link field
         link_model_type = get_args(type)[0]
         # check if this is a list of links
-        if get_origin(type) is list:
-            link_model_type = get_args(link_model_type)[0]
+        if get_origin(model.model_fields.get(field_name).annotation) is list:
+            # link_model_type = get_args(link_model_type)[0]
             return HasMany(
                 **self._standard_type_common(*args, **kwargs),
                 identity=slugify_class_name(link_model_type.__name__)
