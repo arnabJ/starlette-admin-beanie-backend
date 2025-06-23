@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "starlette-admin-beanie-backend"
-version = "0.0.1beta1"
+version = "0.0.1beta2"
 description = "Unofficial Beanie-ODM support for Starlette Admin"
 readme = "README.md"
 authors = [{ name = "Arnab Jain", email = "arnab@inocentum.in" }]
