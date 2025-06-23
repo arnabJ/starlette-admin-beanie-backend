@@ -95,6 +95,7 @@ class ModelView(BaseModelView):
     ) -> Sequence[Any]:
         q = await self._build_query(request, where)
         o = await self._build_order_clauses([] if order_by is None else order_by)
+
         p = generate_projection_schema(self.model, self.exclude_fields_from_list)
         values = await (
             self

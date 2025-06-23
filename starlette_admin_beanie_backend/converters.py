@@ -70,7 +70,6 @@ class ModelConverter(BaseODMModelConverter):
             sub_fields.append(self.convert(*args, **kwargs))
         return CollectionField(**standard_type_common, fields=sub_fields)
 
-
     @converts(bson.ObjectId, bson.Regex, bson.Binary, pydantic.NameEmail, PydanticObjectId, UUID, BackLink)
     def conv_bson_string(self, *args: Any, **kwargs: Any) -> BaseField:
         return StringField(**self._standard_type_common(*args, **kwargs))
