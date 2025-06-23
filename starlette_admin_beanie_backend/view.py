@@ -6,7 +6,8 @@ from beanie.odm.operators.find import logical
 from beanie.odm.operators.find.comparison import In
 from beanie.odm.operators.find.evaluation import RegEx
 from bson import ObjectId
-from pydantic import ValidationError
+from pydantic import ValidationError, create_model
+from pydantic.fields import FieldInfo
 from starlette.requests import Request
 from starlette_admin import BaseField, CollectionField, ListField, HasOne, HasMany, StringField, TextAreaField, \
     EmailField, URLField, PhoneField, ColorField
@@ -16,6 +17,31 @@ from starlette_admin.views import BaseModelView
 
 from .converters import ModelConverter
 from .helpers import normalize_list, resolve_deep_query, resolve_proxy
+
+
+# Dynamically create Pydantic model for projection
+def generate_projection_schema(base_model: Type[Document], exclude_fields: Sequence[str]):
+    fields = {}
+
+    for name, model_field in base_model.model_fields.items():
+        if name in exclude_fields or name == "revision_id":
+            continue
+
+        # Handle default values or required marker
+        default = model_field.default if model_field.default is not None else ...
+        annotation = model_field.annotation
+
+        alias = model_field.alias
+
+        # Keep alias if used
+        if alias != name:
+            field_info = FieldInfo(default=default, validation_alias=alias)
+        else:
+            field_info = FieldInfo(default=default)
+
+        fields[name] = (annotation, field_info)
+
+    return create_model(f"{base_model.__name__}ProjectionSchema", **fields)
 
 
 class ModelView(BaseModelView):
@@ -69,11 +95,15 @@ class ModelView(BaseModelView):
     ) -> Sequence[Any]:
         q = await self._build_query(request, where)
         o = await self._build_order_clauses([] if order_by is None else order_by)
+        p = generate_projection_schema(self.model, self.exclude_fields_from_list)
         values = await (
             self
             .model
-            .find(q, fetch_links=True, nesting_depth=1, projection_model=self.model)
+            .find(q, fetch_links=True, nesting_depth=1, projection_model=p, skip=skip, limit=limit)
+            .project(p)
             .sort(o)
+            .skip(skip)
+            .limit(limit)
             .to_list()
         )
         return values
