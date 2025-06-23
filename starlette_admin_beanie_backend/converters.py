@@ -61,6 +61,15 @@ class ModelConverter(BaseODMModelConverter):
             identity=slugify_class_name(link_model_type.__name__)
         )
 
+    @converts(BaseModel)
+    def conv_model(self, *args: Any, type: BaseModel, **kwargs: Any) -> BaseField:
+        standard_type_common = self._standard_type_common(*args, **kwargs)
+        sub_fields = []
+        for field_name, field in type.model_fields.items():
+            kwargs.update({"name": field_name, "type": field.annotation, "required": field.is_required()})
+            sub_fields.append(self.convert(*args, **kwargs))
+        return CollectionField(**standard_type_common, fields=sub_fields)
+
     @converts(bson.ObjectId, bson.Regex, bson.Binary, pydantic.NameEmail, PydanticObjectId, UUID, BackLink)
     def conv_bson_string(self, *args: Any, **kwargs: Any) -> BaseField:
         return StringField(**self._standard_type_common(*args, **kwargs))
