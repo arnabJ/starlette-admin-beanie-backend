@@ -1,47 +1,16 @@
-import re
 from typing import List, Any, Optional, Dict, Sequence, Union, Type
 
-from beanie import Document
-from beanie.odm.operators.find import logical
+from beanie import Document, PydanticObjectId
 from beanie.odm.operators.find.comparison import In
-from beanie.odm.operators.find.evaluation import RegEx
-from bson import ObjectId
-from pydantic import ValidationError, create_model
-from pydantic.fields import FieldInfo
+from pydantic import ValidationError
 from starlette.requests import Request
-from starlette_admin import BaseField, CollectionField, ListField, HasOne, HasMany, StringField, TextAreaField, \
-    EmailField, URLField, PhoneField, ColorField
+from starlette_admin import BaseField, CollectionField, ListField, HasOne, HasMany
 
 from starlette_admin.helpers import prettify_class_name, slugify_class_name, pydantic_error_to_form_validation_errors
 from starlette_admin.views import BaseModelView
 
 from .converters import ModelConverter
-from .helpers import normalize_list, resolve_deep_query, resolve_proxy
-
-
-# Dynamically create Pydantic model for projection
-def generate_projection_schema(base_model: Type[Document], exclude_fields: Sequence[str]):
-    fields = {}
-
-    for name, model_field in base_model.model_fields.items():
-        if name in exclude_fields or name == "revision_id":
-            continue
-
-        # Handle default values or required marker
-        default = model_field.default if model_field.default is not None else ...
-        annotation = model_field.annotation
-
-        alias = model_field.alias
-
-        # Keep alias if used
-        if alias != name:
-            field_info = FieldInfo(default=default, validation_alias=alias)
-        else:
-            field_info = FieldInfo(default=default)
-
-        fields[name] = (annotation, field_info)
-
-    return create_model(f"{base_model.__name__}ProjectionSchema", **fields)
+from .helpers import normalize_list, resolve_deep_query, resolve_proxy, generate_projection_schema
 
 
 class ModelView(BaseModelView):
@@ -95,29 +64,28 @@ class ModelView(BaseModelView):
     ) -> Sequence[Any]:
         q = await self._build_query(request, where)
         o = await self._build_order_clauses([] if order_by is None else order_by)
-
         p = generate_projection_schema(self.model, self.exclude_fields_from_list)
         values = await (
             self
             .model
-            .find(q, fetch_links=True, nesting_depth=1, projection_model=p, skip=skip, limit=limit)
-            .project(p)
-            .sort(o)
-            .skip(skip)
-            .limit(limit)
+            .find(q, fetch_links=True, nesting_depth=1, projection_model=p, sort=o, skip=skip, limit=limit)
             .to_list()
         )
         return values
 
     async def count(self, request: Request, where: Union[Dict[str, Any], str, None] = None) -> int:
+        if where is None:
+            return await self.model.get_motor_collection().estimated_document_count()
+
         q = await self._build_query(request, where)
-        return await self.model.find(q).count()
+        return await self.model.get_motor_collection().count_documents(q)
 
     async def find_by_pk(self, request: Request, pk: Any) -> Any:
         return await self.model.get(pk, fetch_links=True)
 
     async def find_by_pks(self, request: Request, pks: List[Any]) -> Sequence[Any]:
-        return await self.model.find(In(self.model.id, [ObjectId(pk) for pk in pks])).to_list()
+        pks = list(map(PydanticObjectId, pks))
+        return await self.model.find(In(self.model.id, pks)).to_list()
 
     async def create(self, request: Request, data: Dict) -> Any:
         arranged_data = await self._arrange_data(request, data)
@@ -149,7 +117,7 @@ class ModelView(BaseModelView):
             self.handle_exception(e)
 
     async def delete(self, request: Request, pks: List[Any]) -> Optional[int]:
-        objs = self.model.find(In(self.model.id, [ObjectId(pk) for pk in pks]))
+        objs = self.model.find(In(self.model.id, [PydanticObjectId(pk) for pk in pks]))
         objs_list = await objs.to_list()
         for obj in objs_list:
             await self.before_delete(request, obj)
@@ -203,7 +171,7 @@ class ModelView(BaseModelView):
                 foreign_model = self._find_foreign_model(field.identity)
                 arranged_data[name] = await foreign_model.find_by_pk(request, value)
             elif isinstance(field, HasMany) and value is not None:
-                arranged_data[name] = [ObjectId(v) for v in value]
+                arranged_data[name] = [PydanticObjectId(v) for v in value]
             else:
                 arranged_data[name] = value
         return arranged_data
@@ -213,7 +181,7 @@ class ModelView(BaseModelView):
             return {}
         if isinstance(where, dict):
             return resolve_deep_query(where, self.model)
-        return await self.build_full_text_search_query(request, where)
+        return {}
 
     async def _build_order_clauses(self, order_list: List[str]) -> Any:
         clauses = []
@@ -223,24 +191,3 @@ class ModelView(BaseModelView):
             if clause is not None:
                 clauses.append(f"{'+' if order.lower() == 'asc' else '-'}{clause}")
         return clauses
-
-    async def build_full_text_search_query(self, request: Request, term: str) -> Any:
-        _list = []
-        for field in self.get_fields_list(request):
-            if (
-                    field.searchable
-                    and field.name != "id"
-                    and type(field)
-                    in [
-                StringField,
-                TextAreaField,
-                EmailField,
-                URLField,
-                PhoneField,
-                ColorField,
-            ]
-            ):
-                _list.append(
-                    RegEx(field.name, rf"{re.escape(str(term))}", "i")
-                )
-        return logical.Or(*_list) if len(_list) else {}
