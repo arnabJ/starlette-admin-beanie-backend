@@ -49,8 +49,9 @@ class ModelConverter(BaseODMModelConverter):
         # get the model type from the Link field
         link_model_type = get_args(type)[0]
         # check if this is a list of links
+        # if get_origin(type) is list:
+        #     link_model_type = get_args(link_model_type)[0]
         if get_origin(model.model_fields.get(field_name).annotation) is list:
-            # link_model_type = get_args(link_model_type)[0]
             return HasMany(
                 **self._standard_type_common(*args, **kwargs),
                 identity=slugify_class_name(link_model_type.__name__)
@@ -97,31 +98,3 @@ class ModelConverter(BaseODMModelConverter):
     @converts(AwareDatetime, NaiveDatetime, FutureDatetime, PastDatetime, PastDate, FutureDate)
     def conv_aware_datetime(self, *args: Any, **kwargs: Any) -> BaseField:
         return DateTimeField(**self._standard_type_common(*args, **kwargs))
-
-    @converts(BaseModel)
-    def conv_base_model(
-            self,
-            name: str,
-            required: bool,
-            *args: Any,
-            **kwargs: Any,
-    ) -> BaseField:
-        model_type: Union[Type[BaseModel], None] = kwargs.pop("type", None)
-        if model_type is None:
-            raise ValueError("Missing 'type' in kwargs for BaseModel conversion.")
-
-        # Build subfields by converting each field in the model
-        return CollectionField(
-            name=name,
-            required=required,
-            fields=[
-                self.convert(
-                    *args,
-                    name=field_name,
-                    type=field.annotation,
-                    required=field.is_required(),
-                    **kwargs,
-                )
-                for field_name, field in model_type.model_fields.items()
-            ]
-        )
