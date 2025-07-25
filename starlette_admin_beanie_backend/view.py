@@ -75,10 +75,10 @@ class ModelView(BaseModelView):
 
     async def count(self, request: Request, where: Union[Dict[str, Any], str, None] = None) -> int:
         if where is None:
-            return await self.model.get_motor_collection().estimated_document_count()
+            return await self.model.get_pymongo_collection().estimated_document_count()
 
         q = await self._build_query(request, where)
-        return await self.model.get_motor_collection().count_documents(q)
+        return await self.model.get_pymongo_collection().count_documents(q)
 
     async def find_by_pk(self, request: Request, pk: Any) -> Any:
         return await self.model.get(pk, fetch_links=True)
