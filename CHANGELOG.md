@@ -1,6 +1,22 @@
 # Changelog
 
 ---
+## 0.0.2beta1 (2025-07-25)
+
+### Added
+- Support for Beanie 2.0.0
+- Updated CHANGELOG.md
+
+### Todo
+- Create a proper README/Documentation
+
+### Compatibility
+- Tested with
+  - starlette-admin (0.15.1)
+  - Beanie-ODM (2.0.0)
+  - FastAPI (0.116.1)
+
+---
 ## 0.0.1beta3 (2025-06-26)
 
 ### Added

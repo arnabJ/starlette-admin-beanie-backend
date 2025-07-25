@@ -1,4 +1,4 @@
-from typing import Any, Sequence, Type, get_args, get_origin, Union
+from typing import Any, Sequence, Type, get_args, get_origin
 from uuid import UUID
 
 import bson

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "starlette-admin-beanie-backend"
-version = "0.0.1beta3"
+version = "0.0.2beta1"
 description = "Unofficial Beanie-ODM support for Starlette Admin"
 readme = "README.md"
 authors = [{ name = "Arnab Jain", email = "arnab@inocentum.in" }]
@@ -27,9 +27,9 @@ classifiers = [
 ]
 dependencies = [
     "starlette-admin>=0.15.0",
-    "beanie>=1.29.0"
+    "beanie>=2.0.0"
 ]
-requires-python = ">=3.9,<4.0"
+requires-python = ">=3.9,<3.14"
 
 [project.urls]
 Homepage = "https://github.com/arnabJ/starlette-admin-beanie-backend"
