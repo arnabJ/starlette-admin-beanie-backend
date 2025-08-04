@@ -1,6 +1,21 @@
 # Changelog
 
 ---
+## 0.0.2beta2 (2025-08-04)
+
+### Updated
+- Removed projection from find_all function due to field always required bug
+
+### Todo
+- Create a proper README/Documentation
+
+### Compatibility
+- Tested with
+  - starlette-admin (0.15.1)
+  - Beanie-ODM (2.0.0)
+  - FastAPI (0.116.1)
+
+---
 ## 0.0.2beta1 (2025-07-25)
 
 ### Added

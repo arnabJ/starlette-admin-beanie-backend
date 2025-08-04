@@ -10,7 +10,7 @@ from starlette_admin.helpers import prettify_class_name, slugify_class_name, pyd
 from starlette_admin.views import BaseModelView
 
 from .converters import ModelConverter
-from .helpers import normalize_list, resolve_deep_query, resolve_proxy, generate_projection_schema
+from .helpers import normalize_list, resolve_deep_query, resolve_proxy
 
 
 class ModelView(BaseModelView):
@@ -64,11 +64,10 @@ class ModelView(BaseModelView):
     ) -> Sequence[Any]:
         q = await self._build_query(request, where)
         o = await self._build_order_clauses([] if order_by is None else order_by)
-        p = generate_projection_schema(self.model, self.exclude_fields_from_list)
         values = await (
             self
             .model
-            .find(q, fetch_links=True, nesting_depth=1, projection_model=p, sort=o, skip=skip, limit=limit)
+            .find(q, fetch_links=True, nesting_depth=1, sort=o, skip=skip, limit=limit)
             .to_list()
         )
         return values

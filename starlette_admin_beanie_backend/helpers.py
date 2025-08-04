@@ -105,36 +105,36 @@ def resolve_proxy(model: t.Type[Document], proxy_name: str) -> t.Optional[Field]
 
 
 # Dynamically create Pydantic model for projection
-def generate_projection_schema(base_model: t.Type[Document], exclude_fields: t.Sequence[str]):
-    fields = {}
-
-    for name, model_field in base_model.model_fields.items():
-        if name in exclude_fields or name == "revision_id":
-            continue
-
-        # Handle default values or required marker
-        default = model_field.default if model_field.default is not None else ...
-        annotation = model_field.annotation
-
-        alias = model_field.alias
-
-        # Keep alias if used
-        if alias != name:
-            field_info = FieldInfo(default=default, validation_alias=alias)
-        else:
-            field_info = FieldInfo(default=default)
-
-        fields[name] = (annotation, field_info)
-
-    projection_model = create_model(f"{base_model.__name__}ProjectionSchema", **fields)
-
-    # Add __admin_select2_repr__ attribute if present in the Original Model
-    try:
-        html_repr_method = getattr(
-            base_model,
-            "__admin_select2_repr__",
-        )
-        setattr(projection_model, "__admin_select2_repr__", html_repr_method)
-    except Exception:  # noqa
-        pass
-    return projection_model
+# def generate_projection_schema(base_model: t.Type[Document], exclude_fields: t.Sequence[str]):
+#     fields = {}
+#
+#     for name, model_field in base_model.model_fields.items():
+#         if name in exclude_fields or name == "revision_id":
+#             continue
+#
+#         # Handle default values or required marker
+#         default = model_field.default if model_field.default is not None else ...
+#         annotation = model_field.annotation
+#
+#         alias = model_field.alias
+#
+#         # Keep alias if used
+#         if alias != name:
+#             field_info = FieldInfo(default=default, validation_alias=alias)
+#         else:
+#             field_info = FieldInfo(default=default)
+#
+#         fields[name] = (annotation, field_info)
+#
+#     projection_model = create_model(f"{base_model.__name__}ProjectionSchema", **fields)
+#
+#     # Add __admin_select2_repr__ attribute if present in the Original Model
+#     try:
+#         html_repr_method = getattr(
+#             base_model,
+#             "__admin_select2_repr__",
+#         )
+#         setattr(projection_model, "__admin_select2_repr__", html_repr_method)
+#     except Exception:  # noqa
+#         pass
+#     return projection_model
