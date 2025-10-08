@@ -1,3 +1,5 @@
+import enum
+import inspect
 from typing import Any, Sequence, Type, get_args, get_origin
 from uuid import UUID
 
@@ -7,7 +9,7 @@ from beanie import Document, PydanticObjectId, Link, BackLink
 from pydantic import Field, SecretStr, AwareDatetime, NaiveDatetime, FutureDatetime, PastDatetime, PastDate, FutureDate, \
     BaseModel
 from starlette_admin import BaseField, StringField, IntegerField, DecimalField, EmailField, URLField, HasOne, HasMany, \
-    PasswordField, DateTimeField, CollectionField
+    PasswordField, DateTimeField, CollectionField, ListField
 from starlette_admin.converters import StandardModelConverter, converts
 from starlette_admin.exceptions import NotSupportedAnnotation as BaseNotSupportedAnnotation
 from starlette_admin.helpers import slugify_class_name
@@ -17,12 +19,12 @@ from .exceptions import NotSupportedAnnotation
 
 class BaseODMModelConverter(StandardModelConverter):
     def get_type(self, model: Document, value: Any) -> Any:
-        if isinstance(value, str) and hasattr(model, value):
+        if isinstance(value, str) and (hasattr(model, value) or value in model.model_fields):
             return model.model_fields[value].annotation
         raise ValueError(f"Can't find attribute with key {value}")
 
     def convert_fields_list(
-        self, *, fields: Sequence[Any], model: Type[Document], **kwargs: Any
+            self, *, fields: Sequence[Any], model: Type[Document], **kwargs: Any
     ) -> Sequence[BaseField]:
         fields = [v for v in fields]
         try:
@@ -33,24 +35,45 @@ class BaseODMModelConverter(StandardModelConverter):
 
 class ModelConverter(BaseODMModelConverter):
     @converts(Field)
-    def conv_field(self, *args: Any, type: Field, **kwargs: Any) -> BaseField:
+    def conv_field(self, *args: Any, **kwargs: Any) -> BaseField:
+        _type = kwargs.get("type")
         kwargs.update(
             {
-                "type": type.pydantic_field.annotation,
-                "required": type.is_required_in_doc() and not type.primary_field,
+                "type": _type.pydantic_field.annotation,
+                "required": _type.is_required_in_doc() and not _type.primary_field,
             }
         )
         return self.convert(*args, **kwargs)
 
+    @converts(list)
+    def conv_standard_list(self, *args: Any, **kwargs: Any) -> BaseField:
+        self._ensure_get_args_is_not_null(*args, **kwargs)
+        _type = kwargs.get("type")
+        subtypes = get_args(_type)
+        subtype = subtypes[0] if len(subtypes) > 0 else str
+        if subtype.__name__ == "Link":
+            models = get_args(subtype)
+            model = models[0] if len(models) > 0 else str
+            return HasMany(
+                **self._standard_type_common(*args, **kwargs),
+                identity=slugify_class_name(model.__name__)
+            )
+
+        if inspect.isclass(subtype) and issubclass(subtype, enum.Enum):
+            kwargs.update({"type": subtype, "multiple": True})
+            return self.convert(*args, **kwargs)
+
+        kwargs.update({"type": subtype})
+        return ListField(required=kwargs.get("required", True), field=self.convert(*args, **kwargs))
+
     @converts(Link)
-    def conv_link(self, *args: Any, type: Link, **kwargs: Any) -> BaseField:
+    def conv_link(self, *args: Any, **kwargs: Any) -> BaseField:
+        _type: Link = kwargs.get("type")
         field_name = kwargs.get("name")
         model: Document = kwargs.get("model")
         # get the model type from the Link field
-        link_model_type = get_args(type)[0]
+        link_model_type = get_args(_type)[0]
         # check if this is a list of links
-        # if get_origin(type) is list:
-        #     link_model_type = get_args(link_model_type)[0]
         if get_origin(model.model_fields.get(field_name).annotation) is list:
             return HasMany(
                 **self._standard_type_common(*args, **kwargs),
@@ -63,10 +86,11 @@ class ModelConverter(BaseODMModelConverter):
         )
 
     @converts(BaseModel)
-    def conv_model(self, *args: Any, type: BaseModel, **kwargs: Any) -> BaseField:
+    def conv_model(self, *args: Any, **kwargs: Any) -> BaseField:
+        _type: BaseModel = kwargs.get("type")
         standard_type_common = self._standard_type_common(*args, **kwargs)
         sub_fields = []
-        for field_name, field in type.model_fields.items():
+        for field_name, field in _type.model_fields.items():
             kwargs.update({"name": field_name, "type": field.annotation, "required": field.is_required()})
             sub_fields.append(self.convert(*args, **kwargs))
         return CollectionField(**standard_type_common, fields=sub_fields)

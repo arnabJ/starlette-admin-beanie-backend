@@ -64,13 +64,12 @@ class ModelView(BaseModelView):
     ) -> Sequence[Any]:
         q = await self._build_query(request, where)
         o = await self._build_order_clauses([] if order_by is None else order_by)
-        values = await (
+        return await (
             self
             .model
             .find(q, fetch_links=True, nesting_depth=1, sort=o, skip=skip, limit=limit)
             .to_list()
         )
-        return values
 
     async def count(self, request: Request, where: Union[Dict[str, Any], str, None] = None) -> int:
         if where is None:
@@ -170,12 +169,13 @@ class ModelView(BaseModelView):
                 foreign_model = self._find_foreign_model(field.identity)
                 arranged_data[name] = await foreign_model.find_by_pk(request, value)
             elif isinstance(field, HasMany) and value is not None:
-                arranged_data[name] = [PydanticObjectId(v) for v in value]
+                foreign_model = self._find_foreign_model(field.identity)
+                arranged_data[name] = [await foreign_model.find_by_pk(request, v) for v in value]
             else:
                 arranged_data[name] = value
         return arranged_data
 
-    async def _build_query(self, request: Request, where: Union[Dict[str, Any], str, None] = None) -> Any:
+    async def _build_query(self, _: Request, where: Union[Dict[str, Any], str, None] = None) -> Any:
         if where is None:
             return {}
         if isinstance(where, dict):

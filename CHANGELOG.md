@@ -1,6 +1,23 @@
 # Changelog
 
 ---
+## 0.0.3beta3 (2025-10-08)
+
+### Updated
+- Field types List[Link[ModelName]] (OnetoMany relations) are now properly decoded as HasMany (Field) and rendered in Select2 with MultiSelect capability instead of being decoded as a ListField.
+- OneToOne and OneToMany fields are properly saved to DB without the need to explicitly wrap the fields in HasOne or HasMany in user's custom ModelView.
+- Add a small fix where in certain scenarios, the id filed may give the error `ValueError: Can't find attribute with key id` (fix provided by [@hrz6976](https://github.com/hrz6976)). [GitHub Issue](https://github.com/arnabJ/starlette-admin-beanie-backend/issues/10).
+
+### Todo
+- Create a proper README/Documentation
+
+### Compatibility
+- Tested with
+  - starlette-admin (0.15.1)
+  - Beanie-ODM (2.0.0)
+  - FastAPI (0.118.0)
+
+---
 ## 0.0.2beta2 (2025-08-04)
 
 ### Updated
