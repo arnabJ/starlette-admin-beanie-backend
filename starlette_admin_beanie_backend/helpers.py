@@ -2,8 +2,7 @@ import typing as t
 
 from beanie import Document
 from beanie.odm.operators.find import comparison as c, evaluation as e, logical as l
-from pydantic import Field, create_model
-from pydantic.fields import FieldInfo
+from pydantic import Field
 
 
 def normalize_list(
