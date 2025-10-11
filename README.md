@@ -1,8 +1,11 @@
 # starlette-admin-beanie-backend
 
-🧪 A work-in-progress package to use Beanie-ODM as a backend with starlette-admin.
+🧪 A package to use Beanie-ODM as a backend with starlette-admin.
 
-## 🔧 Install (when released)
+## ✴️ Documentation
+**Follow the documentation [here](https://arnabJ.github.io/starlette-admin-beanie-backend) or check a quick guide below.**
+
+## 🔧 Install
 ```bash
   pip install starlette-admin-beanie-backend
 ```

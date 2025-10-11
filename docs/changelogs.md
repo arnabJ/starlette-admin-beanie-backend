@@ -1,4 +1,13 @@
-# Changelog
+## 0.1.0 (2025-10-13, First Stable Release)
+
+### Updated
+- Added proper documentation
+
+### Compatibility
+- Tested with
+  - starlette-admin (0.15.1)
+  - Beanie-ODM (2.0.0)
+  - FastAPI (0.118.0)
 
 ---
 ## 0.0.3beta3 (2025-10-08)
