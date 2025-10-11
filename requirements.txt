@@ -1,0 +1,5 @@
+beanie==2.0.0
+mkdocs==1.6.1
+mkdocs-material==9.6.21
+mkdocstrings[python]==0.30.1
+starlette-admin==0.15.1
