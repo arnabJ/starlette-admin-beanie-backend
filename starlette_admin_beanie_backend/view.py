@@ -20,8 +20,9 @@ class ModelView(BaseModelView):
             icon: Optional[str] = None,
             name: Optional[str] = None,
             label: Optional[str] = None,
+            auto_help_text: Optional[bool] = True,
             identity: Optional[str] = None,
-            converter: Optional[ModelConverter] = None
+            converter: Optional[ModelConverter] = None,
     ):
         self.model = model
 
@@ -36,10 +37,20 @@ class ModelView(BaseModelView):
         if self.fields is None or len(self.fields) == 0:
             _all_list = list(model.model_fields.keys())
             self.fields = [f for f in _all_list if f != "revision_id"]
+
         # Convert Fields
         self.fields = (converter or ModelConverter()).convert_fields_list(
             fields=self.fields, model=self.model
         )
+
+        # Set the Model field description as help_text if auto_help_text is True and no help_text is set
+        if auto_help_text:
+            model_fields = self.model.model_fields
+            for field in self.fields:
+                if field.help_text is None:
+                    model_field = model_fields.get(field.name)
+                    if model_field and model_field.description is not None:
+                        field.help_text = model_field.description
 
         self.exclude_fields_from_list = normalize_list(self.exclude_fields_from_list)
         self.exclude_fields_from_detail = normalize_list(self.exclude_fields_from_detail)
