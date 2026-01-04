@@ -1,4 +1,17 @@
-## 0.1.0 (2025-10-13, First Stable Release)
+## 0.1.1 (2026-01-04)
+
+### Updated
+- pydantic Field description is now used as help_text if no help_text is manually set for any field (Optional, enabled by default)
+- Added auto_help_text boolean field to ModelView to enable/disable the above feature
+
+### Compatibility
+- Tested with
+  - starlette-admin (0.15.1 & 0.16.0)
+  - Beanie-ODM (2.0.0 & 2.0.1)
+  - FastAPI (0.128.0)
+
+---
+## 0.1.0 (2025-10-11, First Stable Release)
 
 ### Updated
 - Added proper documentation

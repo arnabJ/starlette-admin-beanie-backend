@@ -120,3 +120,82 @@ class UserView(ModelView):
 
 admin.add_view(UserView(User))
 ```
+
+## Disabling Auto Help Text
+From version v0.1.1, this package uses the description field in your Model as the help_text shown on the create/edit forms.
+If you don't want this behavior, you can disable it for any Model by setting `auto_help_text=False` when adding your model to Admin.
+Example:
+```python
+# UserModel.py
+from beanie import Document
+from pydantic import Field
+
+class User(Document):
+    first_name: str = Field(..., description="The user's first name")
+    last_name: str = Field(..., description="The user's last name")
+
+```
+```python
+# main.py (Or, wherever you are setting up your Starlette Admin instance)
+from starlette_admin_beanie_backend import Admin, ModelView
+...
+
+# Initialize Starlette Admin
+admin = Admin(
+    title="My Admin Interface",
+    base_url="/admin",
+    debug=True,
+    auth_provider=AdminAuthProvider(),
+)
+
+# Add the Admin Views
+admin.add_view(ModelView(User, icon="fa fa-users", auto_help_text=False))
+admin.add_view(ModelView(Item, icon="fa fa-box", identity="item"))
+
+# Mount app
+admin.mount_to(app)
+
+...
+```
+If you want to disable it across your whole app, you can extend the ModelView from this package and override the `auto_help_text` to always be False and then update the import in the above code to use your custom ModelView.
+Example:
+```python
+# my_model_view.py
+from starlette_admin_beanie_backend import ModelView
+
+class MyModelView(ModelView):
+    def __init__(
+            self,
+            model: Type[Document],
+            icon: Optional[str] = None,
+            name: Optional[str] = None,
+            label: Optional[str] = None,
+            auto_help_text: Optional[bool] = False,  # <-- This line sets it to False by default
+            identity: Optional[str] = None,
+            converter: Optional[ModelConverter] = None,
+    ):
+        super().__init__(model, icon, name, label, auto_help_text, identity, converter)
+```
+```python
+# main.py (Or, wherever you are setting up your Starlette Admin instance)
+from starlette_admin_beanie_backend import Admin
+from . import MyModelView
+...
+
+# Initialize Starlette Admin
+admin = Admin(
+    title="My Admin Interface",
+    base_url="/admin",
+    debug=True,
+    auth_provider=AdminAuthProvider(),
+)
+
+# Add the Admin Views
+admin.add_view(MyModelView(User, icon="fa fa-users", auto_help_text=True))  # If you want to enable it for this view only
+admin.add_view(MyModelView(Item, icon="fa fa-box", identity="item"))
+
+# Mount app
+admin.mount_to(app)
+
+... 
+```

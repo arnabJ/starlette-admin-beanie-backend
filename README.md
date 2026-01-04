@@ -1,5 +1,20 @@
 # starlette-admin-beanie-backend
 
+<div style="display: flex; gap: 10px">
+<a href="https://github.com/arnabJ/starlette-admin-beanie-backend/actions">
+    <img src="https://github.com/arnabJ/starlette-admin-beanie-backend/actions/workflows/publish.yml/badge.svg" alt="Publish">
+</a>
+<a href="https://pypi.org/project/starlette-admin-beanie-backend/">
+    <img src="https://badge.fury.io/py/starlette-admin-beanie-backend.svg" alt="Package version">
+</a>
+<a href="https://pypi.org/project/starlette-admin-beanie-backend/">
+    <img src="https://img.shields.io/pypi/pyversions/starlette-admin-beanie-backend" alt="Supported Python versions">
+</a>
+<a href="https://pepy.tech/projects/starlette-admin-beanie-backend">
+<img src="https://static.pepy.tech/personalized-badge/starlette-admin-beanie-backend?period=total&units=INTERNATIONAL_SYSTEM&left_color=GRAY&right_color=RED&left_text=downloads" alt="PyPI Downloads">
+</a>
+</div>
+
 🧪 A package to use Beanie-ODM as a backend with starlette-admin.
 
 ## ✴️ Documentation

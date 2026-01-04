@@ -23,9 +23,10 @@ Additionally, since the official Beanie integration is also a third-party contri
 * Follow the usage guide in the [How to?](how_to.md) page.
 
 ### Features
-* Supports latest Beanie Version (v2.0.0)
+* Supports latest Beanie Version (v2.0.1)
 * Search and filtering
 * OneToOne (Link) and OneToMany(List[Link]) relations
+* Uses pydantic Field descriptions as help_text (Optional, enabled by default) when no help_text is provided manually.
 
 ### To Do
 * Support for BackLink (may work, not officially tested)
